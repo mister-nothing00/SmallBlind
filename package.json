@@ -1,0 +1,39 @@
+{
+  "name": "easy-poker-manager",
+  "description": "A complete application to manage poker tournaments with timers, levels, player management and real-time statistics",  "version": "1.0.0",
+  "type": "module",
+  "author": "Francesco di Vita",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mister-nothing00/SmallBlind"
+  },
+  "homepage": "https://easy-poker-manager.vercel.app",
+  "keywords": [
+    "poker",
+    "tournament",
+    "manager",
+    "timer",
+    "blinds",
+    "statistics",
+    "vue",
+    "vue3"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.8",
+    "pinia": "^3.0.1",
+    "uuid": "^11.1.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0",
+    "vue-toast-notification": "^3.1.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.4.0",
+    "sass": "^1.69.5",
+    "vite": "^4.5.0"
+  }
+}

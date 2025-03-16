@@ -1,0 +1,111 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap");
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-image: url("/bg-1.jpg");
+  object-fit: cover;
+  object-position: center;
+  min-height: 50vh;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Playfair Display", serif;
+  font-weight: 400;
+  color: #fefefe;
+}
+
+label,
+input,
+span,
+p,
+button,
+li {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 400;
+}
+
+header {
+  background-color: #0b0b0d;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 1440px;
+
+  margin: 0px auto 32px auto;
+  padding: 15px 20px;
+ 
+ 
+  z-index: 1000;
+
+}
+
+main {
+  display: block;
+ 
+ 
+  width: 90%;
+  margin: 40px auto;
+  max-width: 1440px;
+ 
+}
+
+.next {
+  background-color: #282828 !important;
+  border-radius: 16px;
+  border: none;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  color: white;
+  padding: 4px 16px;
+  position: fixed;
+  bottom: 12px;
+  right: 16px;
+  margin: 0px;
+  z-index: 50;
+}
+
+.next:hover {
+  box-shadow: rgba(234, 88, 12, 0.5) 0px 2px 4px,
+    rgba(255, 2, 2, 0.3) 0px 7px 13px -3px,
+    rgba(255, 0, 0, 0.2) 0px -3px 0px inset;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Media queries per responsività */
+@media screen and (max-width: 768px) {
+  header,
+  main {
+    width: 95%;
+    margin: 20px auto;
+  }
+}
+
+@media screen and (max-width: 425px) {
+  header {
+    width: 100%;
+    border-radius: 0;
+    margin: 0;
+    padding: 10px;
+  }
+
+  main {
+    width: 95%;
+    margin: 15px auto;
+  }
+
+  .next {
+    bottom: 10px;
+    right: 10px;
+    font-size: 14px;
+    padding: 3px 12px;
+  }
+}
