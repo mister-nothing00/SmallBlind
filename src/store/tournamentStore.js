@@ -122,22 +122,18 @@ export const useTournamentStore = defineStore("tournament", {
     },
 
     initializeAudio() {
-      // Suono per il cambio di livello
       this.timerState.levelChangeSound = new Audio();
-      this.timerState.levelChangeSound.src =
-        "../../public/sound/level-change.mp3";
+      this.timerState.levelChangeSound.src = "/sound/level-change.mp3";
       this.timerState.levelChangeSound.preload = "auto";
 
       // Suono per l'inizio del break
       this.timerState.breakStartSound = new Audio();
-      this.timerState.breakStartSound.src =
-        "../../public/sound/pause-alert.mp3";
+      this.timerState.breakStartSound.src = "/sound/pause-alert.mp3";
       this.timerState.breakStartSound.preload = "auto";
 
       // Suono per la fine del torneo
       this.timerState.tournamentEndSound = new Audio();
-      this.timerState.tournamentEndSound.src =
-        "../../public/sound/level-change.mp3";
+      this.timerState.tournamentEndSound.src = "/sound/level-change.mp3";
       this.timerState.tournamentEndSound.preload = "auto";
 
       this.timerState.audioInitialized = true;

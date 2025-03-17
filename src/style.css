@@ -5,12 +5,14 @@
   margin: 0;
   padding: 0;
 }
-
+html, body{
+  overflow-y: auto !important;
+}
 body {
   background-image: url("/bg-1.jpg");
   object-fit: cover;
   object-position: center;
-  min-height: 50vh;
+  
 }
 
 h1,
@@ -39,22 +41,15 @@ header {
   border-radius: 8px;
   width: 90%;
   max-width: 1440px;
-
   margin: 0px auto 32px auto;
   padding: 15px 20px;
- 
- 
-  z-index: 1000;
-
 }
 
 main {
   display: block;
- 
- 
   width: 90%;
-  margin: 40px auto;
   max-width: 1440px;
+  margin: 40px auto;
  
 }
 
@@ -85,7 +80,7 @@ main {
   header,
   main {
     width: 95%;
-    margin: 20px auto;
+    margin: 40px auto;
   }
 }
 
@@ -99,7 +94,7 @@ main {
 
   main {
     width: 95%;
-    margin: 15px auto;
+    margin: 40px auto;
   }
 
   .next {
