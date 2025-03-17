@@ -10,7 +10,7 @@ body {
   background-image: url("/bg-1.jpg");
   object-fit: cover;
   object-position: center;
-  min-height: 50vh;
+ 
 }
 
 h1,
