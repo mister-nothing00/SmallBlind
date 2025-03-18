@@ -1,14 +1,8 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { computed } from 'vue';
 import { useTournamentStore } from "../store/tournamentStore";
-import { Chart, registerables } from 'chart.js';
-
-// Registra i componenti necessari di Chart.js
-Chart.register(...registerables);
 
 const tournamentStore = useTournamentStore();
-const playerChartRef = ref(null);
-const playerChart = ref(null);
 
 // Computed per accedere facilmente ai dati
 const players = computed(() => tournamentStore.tournamentData.players || []);
@@ -29,81 +23,11 @@ const thirdPrize = computed(() => Math.round(prizePool.value * 0.2));
 const formatCurrency = (value) => {
     return value ? `€${value}` : '---';
 };
-
-// Crea e aggiorna il grafico quando i dati cambiano
-const updatePlayerChart = () => {
-    // Se il grafico esiste già, distruggilo prima di ricreare
-    if (playerChart.value) {
-        playerChart.value.destroy();
-    }
-    
-    const totalPlayers = tournamentData.value.numberPlayers || players.value.length;
-    const activePlayers = players.value.length;
-    const eliminatedPlayers = Math.max(0, totalPlayers - activePlayers);
-    
-    // Crea il nuovo grafico solo se l'elemento canvas esiste
-    if (playerChartRef.value) {
-        const ctx = playerChartRef.value.getContext('2d');
-        playerChart.value = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: ['Active Players', 'Eliminated Players'],
-                datasets: [{
-                    data: [activePlayers, eliminatedPlayers],
-                    backgroundColor: ['#4CAF50', '#F44336'],
-                    borderColor: ['#388E3C', '#D32F2F'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: '#f4f4f5',
-                            font: {
-                                size: 12
-                            }
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        titleFont: {
-                            size: 14
-                        },
-                        bodyFont: {
-                            size: 14
-                        },
-                        padding: 10
-                    }
-                },
-            }
-        });
-    }
-};
-
-// Osserva i cambiamenti nei giocatori e aggiorna il grafico
-watch(players, () => {
-    updatePlayerChart();
-}, { deep: true });
-
-// Inizializza il grafico all'avvio
-onMounted(() => {
-    updatePlayerChart();
-});
 </script>
 
 <template>
     <div class="container-state">
         <h4 class="section-title">Status</h4>
-        
-        <div class="chart-container">
-            <canvas ref="playerChartRef" height="180"></canvas>
-        </div>
         
         <div class="status-info">
             <div class="status-row">
@@ -111,17 +35,29 @@ onMounted(() => {
                 <span>{{ players.length }}/{{ tournamentData.numberPlayers || players.length }}</span>
             </div>
             
+            <div class="player-status-info">
+                <div class="status-row">
+                    <h5>Active Players</h5>
+                    <span>{{ players.length }}</span>
+                </div>
+                <div class="status-row">
+                    <h5>Eliminated Players</h5>
+                    <span>{{ Math.max(0, (tournamentData.numberPlayers || players.length) - players.length) }}</span>
+                </div>
+            </div>
+            
             <div class="prize-info">
+                <h5 class="prize-title">Prize Distribution</h5>
                 <div class="prize-row">
-                    <p>1°</p>
+                    <p>1° Place</p>
                     <p>{{ formatCurrency(firstPrize) }}</p>
                 </div>
                 <div class="prize-row">
-                    <p>2°</p>
+                    <p>2° Place</p>
                     <p>{{ formatCurrency(secondPrize) }}</p>
                 </div>
                 <div class="prize-row">
-                    <p>3°</p>
+                    <p>3° Place</p>
                     <p>{{ formatCurrency(thirdPrize) }}</p>
                 </div>
             </div>
@@ -147,15 +83,6 @@ onMounted(() => {
     text-align: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 8px;
-}
-
-.chart-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 180px;
-    margin-bottom: 16px;
-    position: relative;
 }
 
 .status-info {
@@ -184,10 +111,26 @@ onMounted(() => {
     font-weight: bold;
 }
 
+.player-status-info {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    padding: 10px;
+    margin-top: 4px;
+}
+
 .prize-info {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    margin-top: 8px;
+}
+
+.prize-title {
+    font-size: 16px;
+    color: #C9B037;
+    margin: 0 0 8px 0;
+    padding-bottom: 4px;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
 }
 
 .prize-row {

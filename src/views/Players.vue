@@ -24,6 +24,12 @@ onMounted(() => {
   // Controlla se ci sono giocatori già esistenti nello store
   if (tournamentStore.tournamentData.players && tournamentStore.tournamentData.players.length > 0) {
     players.value = JSON.parse(JSON.stringify(tournamentStore.tournamentData.players));
+    
+    // Assicuriamoci che ogni giocatore abbia i contatori rebuy e addon
+    players.value.forEach(player => {
+      if (player.reBuyCount === undefined) player.reBuyCount = 0;
+      if (player.addOnCount === undefined) player.addOnCount = 0;
+    });
   }
   
   // Aggiungi event listener per il resize
@@ -39,6 +45,8 @@ const addPlayer = () => {
     cognome: cognome.value,
     stack: stackInitial.value,
     spesa: buyIn.value,
+    reBuyCount: 0,
+    addOnCount: 0
   };
 
   players.value.push(newPlayer);
@@ -56,51 +64,63 @@ const addPlayer = () => {
   });
 };
 
-//aggiornamento dello stack e della spesa totale
-const updatePlayerStack = (playerId, type) => {
-  let updatedStack = stackInitial.value;
-  let updatedSpesaTotale = buyIn.value;
-
-  if (type === 'addOn' && tournamentStore.tournamentData.addOn.enabled) {
-    updatedStack += tournamentStore.tournamentData.addOn.addOnStack;
-    updatedSpesaTotale += tournamentStore.tournamentData.addOn.costo;
-    toast.success("Add-on calculation performed", {
-      position: "top-right",
-      duration: 3000,
-      dismissible: true,
-    });
-  }
-  else if (type === 'reBuy' && tournamentStore.tournamentData.reBuy.enabled) {
-    updatedStack += tournamentStore.tournamentData.reBuy.reBuyStack;
-    updatedSpesaTotale += tournamentStore.tournamentData.reBuy.costo;
-    toast.success("Re-buy calculation performed", {
-      position: "top-right",
-      duration: 3000,
-      dismissible: true,
-    });
-  }
-  else if (type === 'reBuy&AddOn' && tournamentStore.tournamentData.reBuy.enabled && tournamentStore.tournamentData.addOn.enabled) {
-    updatedStack += tournamentStore.tournamentData.reBuy.reBuyStack + tournamentStore.tournamentData.addOn.addOnStack;
-    updatedSpesaTotale += (tournamentStore.tournamentData.reBuy.costo + tournamentStore.tournamentData.addOn.costo);
-    toast.success("Add-on & Re-buy calculation performed", {
-      position: "top-right",
-      duration: 3000,
-      dismissible: true,
-    });
-  }
-  else {
-    toast.error("Option not enabled in tournament settings", {
+//aggiornamento dello stack e della spesa totale con rebuy
+const addReBuy = (playerId) => {
+  if (!tournamentStore.tournamentData.reBuy.enabled) {
+    toast.error("Rebuy not enabled in tournament settings", {
       position: "top-right",
       duration: 3000,
       dismissible: true,
     });
     return;
   }
+  
+  // Aggiorna lo stato nello store
+  const success = tournamentStore.addReBuyToPlayer(playerId);
+  
+  if (success) {
+    // Aggiorna la visualizzazione locale
+    const playerIndex = players.value.findIndex(p => p.id === playerId);
+    if (playerIndex !== -1) {
+      const player = tournamentStore.tournamentData.players.find(p => p.id === playerId);
+      players.value[playerIndex] = { ...player };
+    }
+    
+    toast.success("Re-buy added successfully", {
+      position: "top-right",
+      duration: 3000,
+      dismissible: true,
+    });
+  }
+};
 
-  const player = players.value.find(p => p.id === playerId);
-  if (player) {
-    player.stack = updatedStack;
-    player.spesa = updatedSpesaTotale;
+//aggiornamento dello stack e della spesa totale con addon
+const addAddOn = (playerId) => {
+  if (!tournamentStore.tournamentData.addOn.enabled) {
+    toast.error("Add-on not enabled in tournament settings", {
+      position: "top-right",
+      duration: 3000,
+      dismissible: true,
+    });
+    return;
+  }
+  
+  // Aggiorna lo stato nello store
+  const success = tournamentStore.addAddOnToPlayer(playerId);
+  
+  if (success) {
+    // Aggiorna la visualizzazione locale
+    const playerIndex = players.value.findIndex(p => p.id === playerId);
+    if (playerIndex !== -1) {
+      const player = tournamentStore.tournamentData.players.find(p => p.id === playerId);
+      players.value[playerIndex] = { ...player };
+    }
+    
+    toast.success("Add-on added successfully", {
+      position: "top-right",
+      duration: 3000,
+      dismissible: true,
+    });
   }
 };
 
@@ -174,6 +194,8 @@ const savePlayers = () => {
           <th>Cognome</th>
           <th>Stack</th>
           <th>Spesa</th>
+          <th>Re-buys</th>
+          <th>Add-ons</th>
           <th>Azioni</th>
         </tr>
       </thead>
@@ -184,11 +206,12 @@ const savePlayers = () => {
           <td><input type="text" v-model="player.cognome" placeholder="Cognome" /></td>
           <td>{{ player.stack || stackInitial || 0 }}</td>
           <td>{{ player.spesa || buyIn || 0 }}</td>
+          <td>{{ player.reBuyCount || 0 }}</td>
+          <td>{{ player.addOnCount || 0 }}</td>
           <td>
             <div class="actions-player">
-              <button class="addOn" @click="updatePlayerStack(player.id, 'addOn')">Add-On</button>
-              <button class="reBuy" @click="updatePlayerStack(player.id, 'reBuy')">Re-buy</button>
-              <button class="reBuy-addOn" @click="updatePlayerStack(player.id, 'reBuy&AddOn')">Add-On & Re-Buy</button>
+              <button class="reBuy" @click="addReBuy(player.id)">Re-buy</button>
+              <button class="addOn" @click="addAddOn(player.id)">Add-On</button>
               <button class="delete" @click="deletePlayer(player.id)">Rimuovi</button>
             </div>
           </td>
@@ -232,12 +255,21 @@ const savePlayers = () => {
             <label>Spesa</label>
             <span>{{ player.spesa || buyIn || 0 }}</span>
           </div>
+          
+          <div class="field-group readonly">
+            <label>Re-buys</label>
+            <span>{{ player.reBuyCount || 0 }}</span>
+          </div>
+          
+          <div class="field-group readonly">
+            <label>Add-ons</label>
+            <span>{{ player.addOnCount || 0 }}</span>
+          </div>
         </div>
         
         <div class="player-actions">
-          <button class="addOn" @click="updatePlayerStack(player.id, 'addOn')">Add-On</button>
-          <button class="reBuy" @click="updatePlayerStack(player.id, 'reBuy')">Re-buy</button>
-          <button class="reBuy-addOn" @click="updatePlayerStack(player.id, 'reBuy&AddOn')">Add-On & Re-Buy</button>
+          <button class="reBuy" @click="addReBuy(player.id)">Re-buy</button>
+          <button class="addOn" @click="addAddOn(player.id)">Add-On</button>
         </div>
       </div>
     </div>
