@@ -91,13 +91,25 @@ export const useTournamentStore = defineStore("tournament", {
       );
     },
 
-    //PLayers
+    //Players
     addPlayer(player) {
-      this.tournamentData.players.push(player);
+      // Contatori per rebuy e addon
+      const newPlayer = {
+        ...player,
+        reBuyCount: 0,
+        addOnCount: 0,
+      };
+      this.tournamentData.players.push(newPlayer);
     },
 
     setPlayers(players) {
-      this.tournamentData.players = players;
+      // Contatori per ogni giocatore
+      const playersWithCounts = players.map((player) => ({
+        ...player,
+        reBuyCount: player.reBuyCount || 0,
+        addOnCount: player.addOnCount || 0,
+      }));
+      this.tournamentData.players = playersWithCounts;
     },
 
     deletePlayerFromTournament(playerId) {
@@ -105,7 +117,44 @@ export const useTournamentStore = defineStore("tournament", {
         (player) => player.id !== playerId
       );
     },
-    // Nuove azioni per il timer
+
+    // Aggiungere un rebuy a un giocatore
+    addReBuyToPlayer(playerId) {
+      const player = this.tournamentData.players.find((p) => p.id === playerId);
+      if (player && this.tournamentData.reBuy.enabled) {
+        player.reBuyCount = (player.reBuyCount || 0) + 1;
+        player.stack =
+          this.tournamentData.stackInitial +
+          player.reBuyCount * this.tournamentData.reBuy.reBuyStack +
+          (player.addOnCount || 0) * this.tournamentData.addOn.addOnStack;
+        player.spesa =
+          this.tournamentData.buyIn +
+          player.reBuyCount * this.tournamentData.reBuy.costo +
+          (player.addOnCount || 0) * this.tournamentData.addOn.costo;
+        return true;
+      }
+      return false;
+    },
+
+    // Aggiungere un addon a un giocatore
+    addAddOnToPlayer(playerId) {
+      const player = this.tournamentData.players.find((p) => p.id === playerId);
+      if (player && this.tournamentData.addOn.enabled) {
+        player.addOnCount = (player.addOnCount || 0) + 1;
+        player.stack =
+          this.tournamentData.stackInitial +
+          (player.reBuyCount || 0) * this.tournamentData.reBuy.reBuyStack +
+          player.addOnCount * this.tournamentData.addOn.addOnStack;
+        player.spesa =
+          this.tournamentData.buyIn +
+          (player.reBuyCount || 0) * this.tournamentData.reBuy.costo +
+          player.addOnCount * this.tournamentData.addOn.costo;
+        return true;
+      }
+      return false;
+    },
+
+    // Timer actions
     initializeTimer() {
       if (
         this.tournamentData.levels &&
@@ -124,20 +173,17 @@ export const useTournamentStore = defineStore("tournament", {
     initializeAudio() {
       // Suono per il cambio di livello
       this.timerState.levelChangeSound = new Audio();
-      this.timerState.levelChangeSound.src =
-        "../../public/sound/level-change.mp3";
+      this.timerState.levelChangeSound.src = " /sound/level-change.mp3";
       this.timerState.levelChangeSound.preload = "auto";
 
       // Suono per l'inizio del break
       this.timerState.breakStartSound = new Audio();
-      this.timerState.breakStartSound.src =
-        "../../public/sound/pause-alert.mp3";
+      this.timerState.breakStartSound.src = "/sound/pause-alert.mp3";
       this.timerState.breakStartSound.preload = "auto";
 
       // Suono per la fine del torneo
       this.timerState.tournamentEndSound = new Audio();
-      this.timerState.tournamentEndSound.src =
-        "../../public/sound/level-change.mp3";
+      this.timerState.tournamentEndSound.src = "/sound/level-change.mp3";
       this.timerState.tournamentEndSound.preload = "auto";
 
       this.timerState.audioInitialized = true;
@@ -192,7 +238,7 @@ export const useTournamentStore = defineStore("tournament", {
 
     // Crea un intervallo globale per aggiornare il timer
     createGlobalInterval() {
-      // Cancella qualsiasi intervallo esistente per sicurezza
+      // Cancella qualsiasi intervallo esistente 
       this.clearGlobalInterval();
 
       // Crea un nuovo intervallo che aggiorna il timer ogni secondo

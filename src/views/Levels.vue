@@ -11,7 +11,7 @@ const router = useRouter();
 const levels = ref([]);
 const isMobile = ref(window.innerWidth <= 768);
 
-// Aggiorna lo stato mobile quando la finestra viene ridimensionata
+// Aggiorna lo stato mobile quando la finestra viene ridimensionata a 768px
 const updateWindowSize = () => {
   isMobile.value = window.innerWidth <= 768;
 };
@@ -39,7 +39,7 @@ const addLevel = () => {
     levels.value.push(newLevel);
     tournamentStore.addLevelToTournament(newLevel);
     
-    // Mostra notifica di conferma
+   
     toast.success("Level added!", {
         position: "bottom-right",
         duration: 1500,

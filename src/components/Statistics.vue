@@ -1,18 +1,11 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { computed } from 'vue';
 import { useTournamentStore } from "../store/tournamentStore";
-import { Chart, registerables } from 'chart.js';
-
-// Registra i componenti necessari di Chart.js
-Chart.register(...registerables);
 
 const tournamentStore = useTournamentStore();
-const stackChartRef = ref(null);
-const stackChart = ref(null);
 
-// Computed per accedere facilmente ai dati
+
 const players = computed(() => tournamentStore.tournamentData.players || []);
-const tournamentData = computed(() => tournamentStore.tournamentData);
 
 // Calcolo dello stack medio
 const avgStack = computed(() => {
@@ -35,99 +28,11 @@ const totalPrize = computed(() => {
 const formatNumber = (num) => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 };
-
-// Crea e aggiorna il grafico quando i dati cambiano
-const updateStackChart = () => {
-    // Se il grafico esiste già, distruggilo prima di ricreare
-    if (stackChart.value) {
-        stackChart.value.destroy();
-    }
-
-    // Prepara i dati ordinati per stack decrescente
-    const sortedPlayers = [...players.value]
-        .sort((a, b) => (b.stack || 0) - (a.stack || 0))
-        .map(player => ({
-            name: player.nome ? `${player.nome.charAt(0)}. ${player.cognome}` : `Player ${player.id}`,
-            stack: player.stack || 0
-        }));
-
-    // Crea il nuovo grafico solo se l'elemento canvas esiste
-    if (stackChartRef.value) {
-        const ctx = stackChartRef.value.getContext('2d');
-        stackChart.value = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: sortedPlayers.map(player => player.name),
-                datasets: [{
-                    label: 'Player Stack',
-                    data: sortedPlayers.map(player => player.stack),
-                    backgroundColor: '#4ade80',
-                    borderColor: '#22c55e',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
-                        },
-                        ticks: {
-                            color: '#a1a1aa'
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            color: '#a1a1aa',
-                            maxRotation: 45,
-                            minRotation: 45
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        callbacks: {
-                            label: function (context) {
-                                return `Stack: ${formatNumber(context.parsed.y)}`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-};
-
-// Osserva i cambiamenti nei giocatori e aggiorna il grafico
-watch(players, () => {
-    updateStackChart();
-}, { deep: true });
-
-// Inizializza il grafico all'avvio
-onMounted(() => {
-    updateStackChart();
-});
 </script>
 
 <template>
     <div class="container-statistics">
         <h4 class="section-title">Statistics</h4>
-
-        <div class="chart-container">
-            <canvas ref="stackChartRef" height="200"></canvas>
-        </div>
 
         <div class="stats-info">
             <div class="stats-row">
@@ -170,15 +75,6 @@ onMounted(() => {
     text-align: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 8px;
-}
-
-.chart-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 200px;
-    margin-bottom: 16px;
-    position: relative;
 }
 
 .stats-info {

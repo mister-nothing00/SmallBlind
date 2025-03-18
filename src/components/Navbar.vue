@@ -5,8 +5,6 @@ const isMenuOpen = ref(false);
 
 const toggleMenu = () => {
     isMenuOpen.value = !isMenuOpen.value;
-
-    // Prevenire lo scroll quando il menu è aperto su mobile
     if (isMenuOpen.value) {
         document.body.style.overflow = 'hidden';
     } else {

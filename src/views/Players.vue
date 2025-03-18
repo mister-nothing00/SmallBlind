@@ -15,22 +15,28 @@ const cognome = ref("");
 const stackInitial = ref(tournamentStore.tournamentData.stackInitial);
 const buyIn = ref(tournamentStore.tournamentData.buyIn);
 
-// Aggiorna lo stato mobile quando la finestra viene ridimensionata
+// Aggiorna lo stato mobile quando la finestra viene ridimensionata a768px
 const updateWindowSize = () => {
   isMobile.value = window.innerWidth <= 768;
 };
 
 onMounted(() => {
-  // Controlla se ci sono giocatori già esistenti nello store
+  
   if (tournamentStore.tournamentData.players && tournamentStore.tournamentData.players.length > 0) {
     players.value = JSON.parse(JSON.stringify(tournamentStore.tournamentData.players));
+
+    // Verifica che ogni giocatore abbia i contatori rebuy e addon
+    players.value.forEach(player => {
+      if (player.reBuyCount === undefined) player.reBuyCount = 0;
+      if (player.addOnCount === undefined) player.addOnCount = 0;
+    });
   }
+
   
-  // Aggiungi event listener per il resize
   window.addEventListener('resize', updateWindowSize);
 });
 
-//aggiunta giocatore
+
 const addPlayer = () => {
   const nextPlayerId = players.value.length + 1;
   const newPlayer = {
@@ -39,15 +45,17 @@ const addPlayer = () => {
     cognome: cognome.value,
     stack: stackInitial.value,
     spesa: buyIn.value,
+    reBuyCount: 0,
+    addOnCount: 0
   };
 
   players.value.push(newPlayer);
   tournamentStore.addPlayer(newPlayer);
-  
+
   // Reset dei campi input
   nome.value = "";
   cognome.value = "";
-  
+
   // Notifica
   toast.success("Player added!", {
     position: "top-right",
@@ -56,40 +64,10 @@ const addPlayer = () => {
   });
 };
 
-//aggiornamento dello stack e della spesa totale
-const updatePlayerStack = (playerId, type) => {
-  let updatedStack = stackInitial.value;
-  let updatedSpesaTotale = buyIn.value;
-
-  if (type === 'addOn' && tournamentStore.tournamentData.addOn.enabled) {
-    updatedStack += tournamentStore.tournamentData.addOn.addOnStack;
-    updatedSpesaTotale += tournamentStore.tournamentData.addOn.costo;
-    toast.success("Add-on calculation performed", {
-      position: "top-right",
-      duration: 3000,
-      dismissible: true,
-    });
-  }
-  else if (type === 'reBuy' && tournamentStore.tournamentData.reBuy.enabled) {
-    updatedStack += tournamentStore.tournamentData.reBuy.reBuyStack;
-    updatedSpesaTotale += tournamentStore.tournamentData.reBuy.costo;
-    toast.success("Re-buy calculation performed", {
-      position: "top-right",
-      duration: 3000,
-      dismissible: true,
-    });
-  }
-  else if (type === 'reBuy&AddOn' && tournamentStore.tournamentData.reBuy.enabled && tournamentStore.tournamentData.addOn.enabled) {
-    updatedStack += tournamentStore.tournamentData.reBuy.reBuyStack + tournamentStore.tournamentData.addOn.addOnStack;
-    updatedSpesaTotale += (tournamentStore.tournamentData.reBuy.costo + tournamentStore.tournamentData.addOn.costo);
-    toast.success("Add-on & Re-buy calculation performed", {
-      position: "top-right",
-      duration: 3000,
-      dismissible: true,
-    });
-  }
-  else {
-    toast.error("Option not enabled in tournament settings", {
+//aggiornamento dello stack e della spesa totale con rebuy
+const addReBuy = (playerId) => {
+  if (!tournamentStore.tournamentData.reBuy.enabled) {
+    toast.error("Rebuy not enabled in tournament settings", {
       position: "top-right",
       duration: 3000,
       dismissible: true,
@@ -97,10 +75,52 @@ const updatePlayerStack = (playerId, type) => {
     return;
   }
 
-  const player = players.value.find(p => p.id === playerId);
-  if (player) {
-    player.stack = updatedStack;
-    player.spesa = updatedSpesaTotale;
+  // Aggiorna lo stato nello store
+  const success = tournamentStore.addReBuyToPlayer(playerId);
+
+  if (success) {
+    // Aggiorna la visualizzazione locale
+    const playerIndex = players.value.findIndex(p => p.id === playerId);
+    if (playerIndex !== -1) {
+      const player = tournamentStore.tournamentData.players.find(p => p.id === playerId);
+      players.value[playerIndex] = { ...player };
+    }
+
+    toast.success("Re-buy added successfully", {
+      position: "top-right",
+      duration: 3000,
+      dismissible: true,
+    });
+  }
+};
+
+//aggiornamento dello stack e della spesa totale con addon
+const addAddOn = (playerId) => {
+  if (!tournamentStore.tournamentData.addOn.enabled) {
+    toast.error("Add-on not enabled in tournament settings", {
+      position: "top-right",
+      duration: 3000,
+      dismissible: true,
+    });
+    return;
+  }
+
+  // Aggiorna lo stato nello store
+  const success = tournamentStore.addAddOnToPlayer(playerId);
+
+  if (success) {
+    // Aggiorna la visualizzazione locale
+    const playerIndex = players.value.findIndex(p => p.id === playerId);
+    if (playerIndex !== -1) {
+      const player = tournamentStore.tournamentData.players.find(p => p.id === playerId);
+      players.value[playerIndex] = { ...player };
+    }
+
+    toast.success("Add-on added successfully", {
+      position: "top-right",
+      duration: 3000,
+      dismissible: true,
+    });
   }
 };
 
@@ -128,12 +148,12 @@ const savePlayers = () => {
     });
     return;
   }
-  
+
   tournamentStore.setPlayers(JSON.parse(JSON.stringify(players.value)));
   nextTick(() => {
     console.log("Giocatori nello store:", JSON.parse(JSON.stringify(toRaw(tournamentStore.tournamentData.players))));
   });
-  
+
   router.push("/timer");
   toast.success("Players saved!", {
     position: "bottom-right",
@@ -174,6 +194,8 @@ const savePlayers = () => {
           <th>Cognome</th>
           <th>Stack</th>
           <th>Spesa</th>
+          <th>Re-buys</th>
+          <th>Add-ons</th>
           <th>Azioni</th>
         </tr>
       </thead>
@@ -184,11 +206,12 @@ const savePlayers = () => {
           <td><input type="text" v-model="player.cognome" placeholder="Cognome" /></td>
           <td>{{ player.stack || stackInitial || 0 }}</td>
           <td>{{ player.spesa || buyIn || 0 }}</td>
+          <td>{{ player.reBuyCount || 0 }}</td>
+          <td>{{ player.addOnCount || 0 }}</td>
           <td>
             <div class="actions-player">
-              <button class="addOn" @click="updatePlayerStack(player.id, 'addOn')">Add-On</button>
-              <button class="reBuy" @click="updatePlayerStack(player.id, 'reBuy')">Re-buy</button>
-              <button class="reBuy-addOn" @click="updatePlayerStack(player.id, 'reBuy&AddOn')">Add-On & Re-Buy</button>
+              <button class="reBuy" @click="addReBuy(player.id)">Re-buy</button>
+              <button class="addOn" @click="addAddOn(player.id)">Add-On</button>
               <button class="delete" @click="deletePlayer(player.id)">Rimuovi</button>
             </div>
           </td>
@@ -201,43 +224,54 @@ const savePlayers = () => {
       <div v-if="players.length === 0" class="no-players">
         <p>Nessun giocatore aggiunto. Aggiungi il primo giocatore usando il form sopra.</p>
       </div>
-      
+
       <div v-else v-for="(player, index) in players" :key="player.id" class="player-card">
         <div class="player-header">
           <h3>Giocatore {{ index + 1 }}</h3>
           <button @click="deletePlayer(player.id)" class="delete-mobile">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-              <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+              stroke="currentColor" class="size-6">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
             </svg>
           </button>
         </div>
-        
+
         <div class="player-info">
           <div class="field-group">
             <label>Nome</label>
             <input type="text" v-model="player.nome" placeholder="Nome" />
           </div>
-          
+
           <div class="field-group">
             <label>Cognome</label>
             <input type="text" v-model="player.cognome" placeholder="Cognome" />
           </div>
-          
+
           <div class="field-group readonly">
             <label>Stack</label>
             <span>{{ player.stack || stackInitial || 0 }}</span>
           </div>
-          
+
           <div class="field-group readonly">
             <label>Spesa</label>
             <span>{{ player.spesa || buyIn || 0 }}</span>
           </div>
+
+          <div class="field-group readonly">
+            <label>Re-buys</label>
+            <span>{{ player.reBuyCount || 0 }}</span>
+          </div>
+
+          <div class="field-group readonly">
+            <label>Add-ons</label>
+            <span>{{ player.addOnCount || 0 }}</span>
+          </div>
         </div>
-        
+
         <div class="player-actions">
-          <button class="addOn" @click="updatePlayerStack(player.id, 'addOn')">Add-On</button>
-          <button class="reBuy" @click="updatePlayerStack(player.id, 'reBuy')">Re-buy</button>
-          <button class="reBuy-addOn" @click="updatePlayerStack(player.id, 'reBuy&AddOn')">Add-On & Re-Buy</button>
+          <button class="reBuy" @click="addReBuy(player.id)">Re-buy</button>
+          <button class="addOn" @click="addAddOn(player.id)">Add-On</button>
         </div>
       </div>
     </div>
@@ -341,7 +375,9 @@ th {
   color: #fff;
 }
 
-th, td, tbody {
+th,
+td,
+tbody {
   color: #f4f4f5;
   border: 1px solid #444;
   padding: 10px;
@@ -543,55 +579,56 @@ td>input {
 
 /* Responsive */
 @media screen and (max-width: 1024px) {
-  .header-players > h2 {
+  .header-players>h2 {
     font-size: 32px;
   }
-  
+
   .form-row {
     gap: 10px;
   }
-  
-  th, td {
+
+  th,
+  td {
     padding: 8px 5px;
     font-size: 14px;
   }
-  
+
   .actions-player {
     gap: 5px;
   }
-  
-  .actions-player > button {
+
+  .actions-player>button {
     font-size: 12px;
     padding: 3px 6px;
   }
 }
 
 @media screen and (max-width: 768px) {
-  .header-players > h2 {
+  .header-players>h2 {
     font-size: 28px;
   }
-  
+
   .form-row {
     flex-direction: column;
     gap: 15px;
   }
-  
+
   .add-button {
     width: 100%;
   }
-  
+
   .player-info {
     grid-template-columns: 1fr;
   }
-  
+
   .player-actions {
     flex-direction: column;
   }
-  
+
   .player-actions button {
     width: 100%;
   }
-  
+
   .start-tournament {
     width: 100%;
     padding: 12px;
@@ -599,22 +636,22 @@ td>input {
 }
 
 @media screen and (max-width: 425px) {
-  .header-players > h2 {
+  .header-players>h2 {
     font-size: 24px;
   }
-  
+
   .add-player-form {
     padding: 10px;
   }
-  
+
   .add-player-form h3 {
     font-size: 16px;
   }
-  
+
   .player-card {
     padding: 10px;
   }
-  
+
   .player-header h3 {
     font-size: 16px;
   }
